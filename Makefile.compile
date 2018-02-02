@@ -1,8 +1,8 @@
 .DEFAULT_GOAL=all
 
-CC = g++-5
+CC = g++-7
 GDB = gdb
-CFLAGS += -c -O2 -Weffc++ -std=c++1z -Wall -MMD -ggdb
+CFLAGS += -c -O2 -Weffc++ -std=c++17 -Wall -MMD -ggdb
 
 BUILD_DIR = build
 SRCS = $(shell find ./src -name "*.cc")
