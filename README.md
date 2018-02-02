@@ -13,13 +13,17 @@
 # 运行说明
 
 有两个最终演示效果的地方一个是`http-add-and-blog/blog`，如下图：
+
 ![](blog.png)
 
 
 另一个是`http-add-and-blog/trust`，是一个从`http://ncase.me/trust/`迁过来小游戏，运行效果如下图：
+
 ![](trust.png)
 
 加法效果是这样：
+
+![](add.png)
 
 
 # The End
