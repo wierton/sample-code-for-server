@@ -2,7 +2,10 @@
 #include "file.h"
 #include "debug.h"
 
+#include <string>
 #include <cassert>
+
+std::string work_directory; // bad solution
 
 HTTPResponse add(Session &session, CallbackArgs &args) {
 	std::ostringstream oss;
@@ -13,7 +16,7 @@ HTTPResponse add(Session &session, CallbackArgs &args) {
 
 HTTPResponse file(Session &session, CallbackArgs &args) {
 	wlog("here???\n");
-	auto fp = File(args[0]);
+	auto fp = File(work_directory + args[0]);
 
 	if(!fp.is_exists())
 		return "<html> 404 </html>";
@@ -24,15 +27,29 @@ HTTPResponse file(Session &session, CallbackArgs &args) {
 	return fp;
 }
 
-HTTPResponse h404(Session &session, CallbackArgs &args) {
-	return "<html> 404 </html>";
-}
 
-
+/* @param(1)
+ *	  argument count
+ * @param(2)
+ *    argv[1]: work directory
+ *
+ */
 int main(int argc, char **argv) {
 	HTTPServer server(8080);
+
+	if(argc <= 1) {
+		std::cout << "[ERROR] please specify work directory\n";
+		std::cout << "    eg. <program> ./dir\n";
+		exit(0);
+	}
+
+	work_directory = std::string(argv[1]) + "/";
+
 	server.register_callback({R"(.*)", file});
 	server.register_callback({R"(add/(\d+)/(\d+))", add});
 	server.run();
 	return 0;
 }
+
+
+

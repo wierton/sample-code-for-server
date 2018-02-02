@@ -369,6 +369,11 @@ HTTPServer::HTTPServer(int port) :
 	sessions(),
 	callbacks()
 {
+	auto default_callback = [](Session &session, CallbackArgs &args) -> HTTPResponse {
+		return "<html> 404 </html>";
+	};
+
+	register_callback({R"((|.*))", default_callback});
 }
 
 void HTTPServer::register_callback(const Callback &cb) {
@@ -382,10 +387,17 @@ void HTTPServer::register_callbacks(const std::vector<Callback> &cbs) {
 
 Callback &HTTPServer::find_callback(const std::string &path) {
 	wlog("callback at path '%'\n", path);
+
+	auto real_path = path;
+
+	if(real_path.size() == 0 || File(real_path).is_directory()) {
+		real_path += "/index.html";
+	}
+
 	for(auto it = callbacks.rbegin();
 			it != callbacks.rend();
 			++it) {
-		if(it->init(path)) {
+		if(it->init(real_path)) {
 			return *it;
 		}
 	}
