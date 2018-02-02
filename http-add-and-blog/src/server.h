@@ -84,7 +84,7 @@ public:
 	const std::string &cookie(const std::string &key);
 };
 
-using Session = Json;
+using Session = decltype(0); // hasn't been implemented
 
 using CallbackArgs = std::vector<std::string>;
 class Callback {

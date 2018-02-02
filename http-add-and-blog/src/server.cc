@@ -313,8 +313,8 @@ const std::string &HTTPRequest::header(const std::string &key) {
 std::ostream &operator<<(std::ostream &os, const HTTPResponse &response) {
 	os << "HTTP/1.1 200 OK\r\n";
 
-	for(auto &[k, v] : response._header)
-		os << k << ": " << v << "\r\n";
+	for(auto &kvpair : response._header)
+		os << kvpair.first << ": " << kvpair.second << "\r\n";
 
 	os << "\r\n";
 	os << response._body;
@@ -436,8 +436,8 @@ HTTPResponse::HTTPResponse(std::map<std::string, std::string> &&header, std::str
 	_header(),
 	_body(std::move(body))
 {
-	for(auto &[k, v] : header)
-		_header[std::move(k)] = std::move(v);
+	for(auto &kvpair : header)
+		_header[std::move(kvpair.first)] = std::move(kvpair.second);
 	_header["Content-Length"] = std::to_string(_body.size());
 }
 
