@@ -17,6 +17,7 @@
 #include "server.h"
 #include "helper.h"
 
+std::set<int> TCPServer::opened_servfds;
 
 const std::map<std::string, std::string> HTTPResponse::filetype = {
 	{"html","text/html"},
@@ -42,6 +43,7 @@ TCPServer::TCPServer(int port) :
 TCPServer::~TCPServer() {
 	if(servfd > 0) {
 		wlog("close server fd %\n", servfd);
+		opened_servfds.erase(servfd);
 		close(servfd);
 	}
 }
@@ -51,6 +53,10 @@ void TCPServer::init_servfd() {
 	if(servfd < 0) {
 		wloge("Create Server Socket Failed!\n");
 	}
+
+	// set REUSEADDR
+	int flag = 1;
+	setsockopt(servfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
 
 	// create sockaddr
 	struct sockaddr_in servaddr;
@@ -67,6 +73,8 @@ void TCPServer::init_servfd() {
 	if(listen(servfd, 50) == -1) {
 		wloge("fail to listen on socket.\n");
 	}
+
+	opened_servfds.insert(servfd);
 }
 
 
@@ -77,6 +85,14 @@ void TCPServer::init_servfd(int port) {
 	init_servfd();
 }
 
+void TCPServer::shutdown() {
+	for(auto fd : opened_servfds) {
+		wlog("close fd %\n", fd);
+		close(fd);
+	}
+
+	opened_servfds.clear();
+}
 
 TCPStream TCPServer::accept_client() {
 	struct sockaddr_in client_addr;
@@ -347,21 +363,15 @@ HTTPResponse Callback::operator()(Session &session) {
 
 
 ///   signal handler
-bool SignalHandler::_int_bit = false;
-
-bool SignalHandler::sigint() {
-	return _int_bit;
-}
-
 void SignalHandler::sigint_handler(int signum) {
 	wlog("receive keyboard interrupt\n");
-	_int_bit = true;
+	HTTPServer::shutdown();
+	exit(0);
 }
 
 void SignalHandler::register_sighandler() {
 	signal(SIGINT, sigint_handler);
 }
-
 
 
 HTTPServer::HTTPServer(int port) :
@@ -374,6 +384,10 @@ HTTPServer::HTTPServer(int port) :
 	};
 
 	register_callback({R"((|.*))", default_callback});
+}
+
+void HTTPServer::shutdown() {
+	TCPServer::shutdown();
 }
 
 void HTTPServer::register_callback(const Callback &cb) {
@@ -458,7 +472,7 @@ void HTTPServer::config(const std::string &filename) {
 
 void HTTPServer::run() {
 	SignalHandler::register_sighandler();
-	while(!SignalHandler::sigint()) {
+	while(1) {
 		auto client = accept_client();
 		HTTPRequest request(client);
 		auto &callback = find_callback(request.path());
