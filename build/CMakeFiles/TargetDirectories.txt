@@ -1,0 +1,17 @@
+/home/wierton/sample-code-for-server/build/CMakeFiles/rebuild_cache.dir
+/home/wierton/sample-code-for-server/build/CMakeFiles/edit_cache.dir
+/home/wierton/sample-code-for-server/build/http-server/CMakeFiles/edit_cache.dir
+/home/wierton/sample-code-for-server/build/http-server/CMakeFiles/rebuild_cache.dir
+/home/wierton/sample-code-for-server/build/http-server/CMakeFiles/HttpServer.dir
+/home/wierton/sample-code-for-server/build/http-static/CMakeFiles/rebuild_cache.dir
+/home/wierton/sample-code-for-server/build/http-static/CMakeFiles/edit_cache.dir
+/home/wierton/sample-code-for-server/build/http-static/CMakeFiles/HttpStatic.dir
+/home/wierton/sample-code-for-server/build/streambuf/CMakeFiles/rebuild_cache.dir
+/home/wierton/sample-code-for-server/build/streambuf/CMakeFiles/edit_cache.dir
+/home/wierton/sample-code-for-server/build/streambuf/CMakeFiles/streambuf.dir
+/home/wierton/sample-code-for-server/build/tcpstream/CMakeFiles/rebuild_cache.dir
+/home/wierton/sample-code-for-server/build/tcpstream/CMakeFiles/edit_cache.dir
+/home/wierton/sample-code-for-server/build/tcpstream/CMakeFiles/TcpStream.dir
+/home/wierton/sample-code-for-server/build/tcp-server/CMakeFiles/rebuild_cache.dir
+/home/wierton/sample-code-for-server/build/tcp-server/CMakeFiles/edit_cache.dir
+/home/wierton/sample-code-for-server/build/tcp-server/CMakeFiles/TcpServer.dir
