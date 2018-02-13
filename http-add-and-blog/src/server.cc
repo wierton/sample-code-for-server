@@ -17,6 +17,7 @@
 #include "server.h"
 #include "helper.h"
 
+std::set<int> TCPServer::opened_servfds;
 
 const std::map<std::string, std::string> HTTPResponse::filetype = {
 	{"html","text/html"},
@@ -42,6 +43,7 @@ TCPServer::TCPServer(int port) :
 TCPServer::~TCPServer() {
 	if(servfd > 0) {
 		wlog("close server fd %\n", servfd);
+		opened_servfds.erase(servfd);
 		close(servfd);
 	}
 }
@@ -51,6 +53,10 @@ void TCPServer::init_servfd() {
 	if(servfd < 0) {
 		wloge("Create Server Socket Failed!\n");
 	}
+
+	// set REUSEADDR
+	int flag = 1;
+	setsockopt(servfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
 
 	// create sockaddr
 	struct sockaddr_in servaddr;
@@ -67,6 +73,8 @@ void TCPServer::init_servfd() {
 	if(listen(servfd, 50) == -1) {
 		wloge("fail to listen on socket.\n");
 	}
+
+	opened_servfds.insert(servfd);
 }
 
 
@@ -77,6 +85,14 @@ void TCPServer::init_servfd(int port) {
 	init_servfd();
 }
 
+void TCPServer::shutdown() {
+	for(auto fd : opened_servfds) {
+		wlog("close fd %\n", fd);
+		close(fd);
+	}
+
+	opened_servfds.clear();
+}
 
 TCPStream TCPServer::accept_client() {
 	struct sockaddr_in client_addr;
@@ -313,8 +329,8 @@ const std::string &HTTPRequest::header(const std::string &key) {
 std::ostream &operator<<(std::ostream &os, const HTTPResponse &response) {
 	os << "HTTP/1.1 200 OK\r\n";
 
-	for(auto &[k, v] : response._header)
-		os << k << ": " << v << "\r\n";
+	for(auto &kvpair : response._header)
+		os << kvpair.first << ": " << kvpair.second << "\r\n";
 
 	os << "\r\n";
 	os << response._body;
@@ -347,15 +363,10 @@ HTTPResponse Callback::operator()(Session &session) {
 
 
 ///   signal handler
-bool SignalHandler::_int_bit = false;
-
-bool SignalHandler::sigint() {
-	return _int_bit;
-}
-
 void SignalHandler::sigint_handler(int signum) {
 	wlog("receive keyboard interrupt\n");
-	_int_bit = true;
+	HTTPServer::shutdown();
+	exit(0);
 }
 
 void SignalHandler::register_sighandler() {
@@ -363,12 +374,20 @@ void SignalHandler::register_sighandler() {
 }
 
 
-
 HTTPServer::HTTPServer(int port) :
 	TCPServer(port),
 	sessions(),
 	callbacks()
 {
+	auto default_callback = [](Session &session, CallbackArgs &args) -> HTTPResponse {
+		return "<html> 404 </html>";
+	};
+
+	register_callback({R"((|.*))", default_callback});
+}
+
+void HTTPServer::shutdown() {
+	TCPServer::shutdown();
 }
 
 void HTTPServer::register_callback(const Callback &cb) {
@@ -382,10 +401,17 @@ void HTTPServer::register_callbacks(const std::vector<Callback> &cbs) {
 
 Callback &HTTPServer::find_callback(const std::string &path) {
 	wlog("callback at path '%'\n", path);
+
+	auto real_path = path;
+
+	if(real_path.size() == 0 || File(real_path).is_directory()) {
+		real_path += "/index.html";
+	}
+
 	for(auto it = callbacks.rbegin();
 			it != callbacks.rend();
 			++it) {
-		if(it->init(path)) {
+		if(it->init(real_path)) {
 			return *it;
 		}
 	}
@@ -436,8 +462,8 @@ HTTPResponse::HTTPResponse(std::map<std::string, std::string> &&header, std::str
 	_header(),
 	_body(std::move(body))
 {
-	for(auto &[k, v] : header)
-		_header[std::move(k)] = std::move(v);
+	for(auto &kvpair : header)
+		_header[std::move(kvpair.first)] = std::move(kvpair.second);
 	_header["Content-Length"] = std::to_string(_body.size());
 }
 
@@ -446,7 +472,7 @@ void HTTPServer::config(const std::string &filename) {
 
 void HTTPServer::run() {
 	SignalHandler::register_sighandler();
-	while(!SignalHandler::sigint()) {
+	while(1) {
 		auto client = accept_client();
 		HTTPRequest request(client);
 		auto &callback = find_callback(request.path());

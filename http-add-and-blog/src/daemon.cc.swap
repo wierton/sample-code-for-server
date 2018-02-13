@@ -1,0 +1,135 @@
+#include "daemon.h"
+#include "debug.h"
+
+#include <stdio.h>
+#include <unistd.h>
+#include <syscall.h>
+#include <fcntl.h>
+#include <string.h>
+#include <strings.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ptrace.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/reg.h>
+#include <sys/user.h>
+
+
+class StringMap {
+	int count;
+	int size;
+
+	StringMap(size_t size) :
+		count(0),
+		size(size)
+	{
+	}
+
+public:
+	static StringMap *bind_shared_memory(void *addr, size_t size) {
+		return new(addr) StringMap(size);
+	}
+
+	void push_back(int ch);
+	void pop();
+};
+
+
+static char *path = "123456789abcdefghijkl";
+
+std::string read_string(pid_t pid, void *addr) {
+	std::string s;
+	wlog("addr is %\n", addr);
+	while(1) {
+		int val = ptrace(PTRACE_PEEKDATA, pid, addr, 0);
+		addr += sizeof(val);
+
+		for(int i = 0; i < sizeof(val); i++) {
+			auto ch = (val & (0xff << (i * 8))) >> (i * 8);
+
+			if(ch) {
+				s.push_back(ch);
+			} else {
+			   	return s;
+			}
+		}
+	}
+
+	return s;
+}
+
+void daemon_start(const std::string &work_directory) {
+	printf("%p\n", path);
+	struct user_regs_struct regs;
+
+	void *vaddr = mmap(NULL, 124, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+
+	auto pid = fork();
+	if(pid == 0) {
+		// child process
+		ptrace(PTRACE_TRACEME, 0, NULL, NULL);
+		asm volatile("int $0x3");
+		int fd = open("test.infxx", O_RDONLY);
+
+		static char buf[128];
+		read(fd, buf, 128);
+		printf("read::%s\n", buf);
+
+		close(fd);
+		exit(0);
+	} else {
+		// daemon process
+		int status;
+		bool in_syscall = false;
+
+		while(1) {
+			wait(&status);
+			if(WIFEXITED(status)) {
+				wlog("daemon process exited\n");
+				exit(0);
+			}
+
+			auto syscall_id = ptrace(PTRACE_PEEKUSER, pid, sizeof(void*) * ORIG_RAX, 0);
+
+			if(syscall_id == SYS_open) {
+				wlog("syscall id open:%\n", syscall_id);
+				// redirect opened file
+				if(in_syscall) {
+					// leave syscall
+					in_syscall = false;
+				} else {
+					// entry syscall
+					wlog("entry syscall\n");
+					auto rdi = ptrace(PTRACE_PEEKUSER, pid, sizeof(void *) * RDI, 0);
+					auto rsi = ptrace(PTRACE_PEEKUSER, pid, sizeof(void *) * RSI, 0);
+					printf("%llx, %llx, %llx\n",
+							regs.rax, rdi, rsi);
+					// auto s = read_string(pid, (void*)regs.rax);
+					auto s = read_string(pid, (void*)rdi);
+
+					strcpy((char*)vaddr, "test.inf");
+
+					ptrace(PTRACE_POKEUSER, pid, sizeof(void *) * RDI, (long)vaddr);
+
+					rdi = ptrace(PTRACE_PEEKUSER, pid, sizeof(void *) * RDI, 0);
+					printf("rdi,vaddr:%p, %p\n", rdi, vaddr);
+
+					wlog("open '%'\n", s);
+					in_syscall = true;
+				}
+			}
+
+			sleep(1);
+
+			ptrace(PTRACE_SYSCALL, pid, 0, 0);
+		}
+	}
+}
+
+
+int main() {
+	daemon_start(std::string(""));
+	return 0;
+}

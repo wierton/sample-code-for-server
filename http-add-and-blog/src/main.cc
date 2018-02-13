@@ -2,7 +2,12 @@
 #include "file.h"
 #include "debug.h"
 
+#include "argv.h"
+
+#include <string>
 #include <cassert>
+
+std::string work_directory; // bad solution
 
 HTTPResponse add(Session &session, CallbackArgs &args) {
 	std::ostringstream oss;
@@ -12,8 +17,7 @@ HTTPResponse add(Session &session, CallbackArgs &args) {
 }
 
 HTTPResponse file(Session &session, CallbackArgs &args) {
-	wlog("here???\n");
-	auto fp = File(args[0]);
+	auto fp = File(work_directory + args[0]);
 
 	if(!fp.is_exists())
 		return "<html> 404 </html>";
@@ -24,15 +28,39 @@ HTTPResponse file(Session &session, CallbackArgs &args) {
 	return fp;
 }
 
-HTTPResponse h404(Session &session, CallbackArgs &args) {
-	return "<html> 404 </html>";
-}
 
+static cl::opt<std::string> WorkDirectory(cl::BothOpt, "w", "work-directory");
+static cl::opt<int> Port(cl::BothOpt, "p", "port");
+static cl::opt<void> Help(cl::BothOpt, "h", "help");
 
-int main(int argc, char **argv) {
-	HTTPServer server(8080);
+/* @param(1)
+ *	  argument count
+ * @param(2)
+ *    argv[1]: work directory
+ *
+ */
+int main(int argc, const char **argv) {
+	cl::Argv::parseCommandline(argc, argv);
+
+	if(Help) {
+		std::clog << "usage:\n";
+		std::clog << "<bin> -p {port}/--port={port}\n";
+		std::clog << "<bin> -w {dir}/--work-directory={dir}\n";
+		std::clog << "\n";
+		return 0;
+	}
+
+	// default option
+	auto port = Port ? Port.value() : 8080;
+	work_directory = WorkDirectory ? WorkDirectory.value() + "/" : "./";
+
+	// run server
+	HTTPServer server(port);
 	server.register_callback({R"(.*)", file});
 	server.register_callback({R"(add/(\d+)/(\d+))", add});
 	server.run();
 	return 0;
 }
+
+
+

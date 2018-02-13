@@ -24,6 +24,7 @@ public:
 	bool is_executable();
 
 	const std::string &fullpath();
+	std::string realpath();
 };
 
 using FilePtr = std::shared_ptr<File>;

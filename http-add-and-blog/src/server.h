@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <regex>
 #include <iostream>
@@ -16,6 +17,7 @@ class TCPServer {
 	int port;
 	int servfd;
 
+	static std::set<int> opened_servfds;
 private:
 	void init_servfd();
 
@@ -25,6 +27,8 @@ public:
 
 	void init_servfd(int port);
 	TCPStream accept_client();
+
+	static void shutdown();
 };
 
 enum HTTPMethod { GET, POST, PUT, PATCH };
@@ -104,7 +108,6 @@ public:
 class SignalHandler {
 	static bool _int_bit;
 public:
-	static bool sigint();
 	static void sigint_handler(int);
 	static void register_sighandler();
 };
@@ -114,11 +117,14 @@ class HTTPServer : private TCPServer {
 	std::map<std::string, Session> sessions;
 	std::vector<Callback> callbacks;
 
+
 private:
 	Callback &find_callback(const std::string &path);
 
 public:
 	HTTPServer(int port=80);
+
+	static void shutdown();
 
 	void config(const std::string &filename);
 	// void config(Json _config);

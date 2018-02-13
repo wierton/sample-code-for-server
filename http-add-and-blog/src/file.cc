@@ -1,13 +1,15 @@
 #include "file.h"
-#include <cstdlib>
-#include <sstream>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <iostream>
 #include <fstream>
+#include <cstdlib>
+#include <sstream>
+#include <vector>
 
 
 File::File() :
@@ -47,6 +49,41 @@ size_t File::size() {
 
 const std::string &File::fullpath() {
 	return filename;
+}
+
+std::string File::realpath() {
+	char *fullpath = new char[filename.size() + 1];
+	strcpy(fullpath, filename.c_str());
+
+	std::vector<char *> dirl;
+	dirl.push_back(fullpath);
+	for(auto *p = fullpath; *p; ++p) {
+		if(*p == '/') {
+			*p = '\0';
+
+			if(!dirl.empty()) {
+				if(strcmp(dirl.back(), ".") == 0) {
+					dirl.pop_back();
+				} else if(strcmp(dirl.back(), "..") == 0) {
+					dirl.pop_back();
+					if(!dirl.empty()) dirl.pop_back();
+				}
+			}
+
+			dirl.push_back(p + 1);
+		}
+	}
+
+	// join with '/'
+	std::string path;
+	for(auto *subpath : dirl) {
+		if(*subpath == '\0') continue;
+		path.push_back('/');
+		path += subpath;
+	}
+
+	delete []fullpath;
+	return path;
 }
 
 bool File::is_exists() {
