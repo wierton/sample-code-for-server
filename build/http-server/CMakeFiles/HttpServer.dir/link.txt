@@ -1,1 +1,0 @@
-/usr/bin/c++    -rdynamic CMakeFiles/HttpServer.dir/argv.cc.o CMakeFiles/HttpServer.dir/file.cc.o CMakeFiles/HttpServer.dir/main.cc.o CMakeFiles/HttpServer.dir/server.cc.o CMakeFiles/HttpServer.dir/tcpstream.cc.o  -o HttpServer 

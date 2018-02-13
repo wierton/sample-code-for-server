@@ -1,1 +1,0 @@
-/usr/bin/c++    -rdynamic CMakeFiles/streambuf.dir/main.cc.o  -o streambuf 
