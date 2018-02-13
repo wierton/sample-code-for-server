@@ -7,8 +7,10 @@
 
 # 编译说明
 
-* 请用`g++-7`或`clang-5`，或其他支持相对完整的c++17标准的编译器
-* 对于低版本编译器，请切到`g++-5`分支，`g++-5`分支以适配ubuntu自带的g++-5编译器
+* ~~请用`g++-7`或`clang-5`，或其他支持相对完整的c++17标准的编译器~~
+* ~~对于低版本编译器，请切到`g++-5`分支，`g++-5`分支已适配ubuntu自带的g++-5编译器~~
+* 以ubuntu的默认g++-5编译器在master分支编译即可
+* 编译运行命令：`cd xxx; make run`，xxx是子目录
 
 # 运行说明
 
@@ -17,7 +19,7 @@
 ![](blog.png)
 
 
-另一个是`http-add-and-blog/trust`，是一个从`http://ncase.me/trust/`迁过来小游戏，运行效果如下图：
+另一个是`http-add-and-blog/trust`，是一个从`http://ncase.me/trust/`迁过来的小游戏，运行效果如下图：
 
 ![](trust.png)
 
