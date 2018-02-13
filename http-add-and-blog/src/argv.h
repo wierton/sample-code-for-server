@@ -114,18 +114,20 @@ private:
 public:
 
 	opt(ShortOptType placeholder, StringRef key) :
-		ShortKey(key), Kind(ShortOptValue), Inited(false)
+		ShortKey(key), LongKey(), Value(),
+		Kind(ShortOptValue), Inited(false)
 	{
 		assert(key.size() == 1 && "short option can only has one single character as key.");
 	}
 
 	opt(LongOptType placeholder, StringRef key) :
-		LongKey(key), Kind(LongOptValue), Inited(false)
+		ShortKey(), LongKey(key), Value(),
+		Kind(LongOptValue), Inited(false)
 	{
 	}
 
 	opt(BothOptType placeholder, StringRef shortKey, StringRef longKey) :
-		ShortKey(shortKey), LongKey(longKey),
+		ShortKey(shortKey), LongKey(longKey), Value(),
 		Kind(BothOptType::value), Inited(false)
 	{
 		assert(shortKey.size() == 1 && "short option can only has one single character as key.");
@@ -170,13 +172,15 @@ class opt<void> : public Argv {
 public:
 
 	opt(ShortOptType placeholder, StringRef key) :
-		ShortKey(key), Kind(ShortOptValue), Inited(false)
+		ShortKey(key), LongKey(),
+		Kind(ShortOptValue), Inited(false)
 	{
 		assert(key.size() == 1 && "short option can only has one single character as key.");
 	}
 
 	opt(LongOptType placeholder, StringRef key) :
-		LongKey(key), Kind(LongOptValue), Inited(false)
+		ShortKey(), LongKey(key),
+		Kind(LongOptValue), Inited(false)
 	{
 	}
 
