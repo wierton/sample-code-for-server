@@ -29,9 +29,6 @@ using ShortOptType = OptionType<ShortOptValue>;
 using LongOptType  = OptionType<LongOptValue>;
 using BothOptType  = OptionType<BothOptValue>;
 
-template<class T>
-constexpr bool EitherShortOrLongOpt = std::is_same<T, ShortOptType>::value || std::is_same<T, LongOptType>::value;
-
 extern ShortOptType ShortOpt;
 extern LongOptType  LongOpt;
 extern BothOptType  BothOpt;
