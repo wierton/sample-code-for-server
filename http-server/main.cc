@@ -19,8 +19,10 @@ HTTPResponse add(Session &session, CallbackArgs &args) {
 HTTPResponse file(Session &session, CallbackArgs &args) {
 	auto fp = File(work_directory + args[0]);
 
-	if(!fp.is_exists())
+	if(!fp.is_exists()) {
+		wlog("request file % didn't exist\n", fp.fullpath());
 		return "<html> 404 </html>";
+	}
 
 	if(fp.is_directory())
 		return "";

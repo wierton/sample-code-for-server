@@ -33,6 +33,17 @@ public:
 
 enum HTTPMethod { GET, POST, PUT, PATCH };
 
+inline std::ostream &operator<<(std::ostream &os, HTTPMethod method) {
+	switch(method) {
+		case GET:   os << "GET";   break;
+		case POST:  os << "POST";  break;
+		case PUT:   os << "PUT";   break;
+		case PATCH: os << "PATCH"; break;
+		default:    os << "<BAD>"; break;
+	}
+	return os;
+}
+
 class HTTPResponse {
 	int _return_code;
 	std::map<std::string, std::string> _header;

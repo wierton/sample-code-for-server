@@ -16,6 +16,7 @@
 #include "debug.h"
 #include "server.h"
 #include "helper.h"
+#include "threadpool.h"
 
 std::set<int> TCPServer::opened_servfds;
 
@@ -120,6 +121,20 @@ HTTPRequest::HTTPRequest(std::istream &iss) :
 	parse_firstline();
 	parse_header();
 	parse_body();
+
+	/* output some debug info */
+	std::ostringstream oss;
+	oss << _method << " /" << _path << "?";
+	for(auto &kvpair : _get) {
+		oss << kvpair.first << "=" << kvpair.second;
+	}
+	oss << "\n";
+
+	for(auto &kvpair : _header) {
+		oss << kvpair.first << ": " << kvpair.second << "\n";
+	}
+
+	std::clog << oss.str() << "\n";
 }
 
 void HTTPRequest::parse_method() {
@@ -133,17 +148,14 @@ void HTTPRequest::parse_method() {
 	};
 	_method = conversion[method_s];
 
-	wlog("method:%-->%\n", method_s, _method);
 }
 
 void HTTPRequest::parse_path() {
 	ignore_blank(iss);
 	peek_until(iss, _path, " \t\r\n?"_n);
-	wlog("path before:'%'\n", _path);
 	if(_path[0] == '/')
 		_path.erase(0, 1);
 
-	wlog("path:'%'\n", _path);
 }
 
 void HTTPRequest::parse_get_arguments() {
@@ -164,7 +176,6 @@ void HTTPRequest::parse_get_arguments() {
 		if(iss.peek() == '&')
 			iss.ignore();
 
-		wlog("GET[%]=%\n", key, value);
 		_get[std::move(key)] = value;
 
 		if(std::isspace(iss.peek()))
@@ -200,7 +211,6 @@ void HTTPRequest::parse_header_oneline() {
 			peek_until(iss, value, "\r\n"_n);
 		}
 
-		wlog("HEADER[%]:%\n", key, value);
 		_header[std::move(key)] = value;
 
 		if(isspace(iss.peek()))
@@ -273,13 +283,10 @@ bool HTTPRequest::check_if_end_of_header() {
 void HTTPRequest::parse_header() {
 	ignore_while(iss, "\r\n"_n);
 	while(iss.good()) {
-		wlog("parse header oneline\n");
 		parse_header_oneline();
 		if(!check_if_end_of_header()) {
-			wlog("not end of header\n");
 			ignore_while(iss, "\r\n"_n);
 		} else {
-			wlog("end of header\n");
 			break;
 		}
 	}
@@ -291,11 +298,9 @@ void HTTPRequest::parse_cookie() {
 void HTTPRequest::parse_body() {
 	size_t length = 0;
 	auto key = get("Content-Length");
-	wlog("no key Content-Length\n");
 	if(key == "") return;
 
 	std::istringstream(key) >> length;
-	wlog("content-length:%->%\n", key, length);
 	while(length && iss.good()) {
 		_body.push_back(iss.get());
 		length --;
@@ -346,11 +351,9 @@ Callback::Callback(const std::string &key, const callback_t &callback) :
 
 bool Callback::init(const std::string &path) {
 	std::smatch match_results;
-	wlog("init with path '%'\n", path);
 	std::regex_match(path, match_results, group_pattern);
 	if(match_results.empty()) return false;
 
-	wlog("extract match results\n");
 	args.clear();
 	for(auto &sub : match_results)
 		args.push_back(sub);
@@ -400,8 +403,6 @@ void HTTPServer::register_callbacks(const std::vector<Callback> &cbs) {
 }
 
 Callback &HTTPServer::find_callback(const std::string &path) {
-	wlog("callback at path '%'\n", path);
-
 	auto real_path = path;
 
 	if(real_path.size() == 0 || File(real_path).is_directory()) {
@@ -415,7 +416,6 @@ Callback &HTTPServer::find_callback(const std::string &path) {
 			return *it;
 		}
 	}
-	wlog("callback not found, return default callback\n");
 	return callbacks.front();
 }
 
@@ -472,13 +472,20 @@ void HTTPServer::config(const std::string &filename) {
 
 void HTTPServer::run() {
 	SignalHandler::register_sighandler();
-	while(1) {
-		auto client = accept_client();
-		HTTPRequest request(client);
+	ThreadPool<10> pool;
+
+	auto processor = [this](std::shared_ptr<TCPStream> client) {
+		HTTPRequest request(*client);
 		auto &callback = find_callback(request.path());
 		auto response = callback(sessions[""]);
-		client << response;
+		(*client) << response;
+	};
+
+	while(1) {
+		std::shared_ptr<TCPStream> client {
+			new TCPStream { accept_client() }
+		};
+		pool.submitTask(processor, std::move(client));
 	}
-	wlog("close http server\n");
 }
 

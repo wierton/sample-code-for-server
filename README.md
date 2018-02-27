@@ -4,6 +4,7 @@
 * tcp-server 里面是一个简单的tcp层服务器，没有对http内容的处理
 * http-static 只返回纯静态内容
 * tcpstream 是对socket的stream包装
+* http-server增加了多线程支持
 
 # 编译说明
 
